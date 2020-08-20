@@ -43,13 +43,18 @@ func loggingMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	}
 }
 
-func testing(next echo.HandlerFunc) echo.HandlerFunc {
+func testingMiddleware(next echo.HandlerFunc) echo.HandlerFunc {
 	return func(c echo.Context) error {
 
-		log.Println("this is testing")
+		log.Println("this is testing middleware")
 
 		return next(c)
 	}
+}
+
+func testing(c echo.Context) error {
+	fmt.Println("this is testing")
+	return nil
 }
 
 func getContainers(c echo.Context) error {
@@ -82,7 +87,17 @@ func main() {
 	// create a new echo instance
 	e := echo.New()
 
-	e.GET("/containers", getContainers, checkAPIKey, loggingMiddleware, testing)
+	// ROOT middleware
+	e.Use(loggingMiddleware)
+
+	// making a protected GROUP /protected
+	protected := e.Group("/protected", checkAPIKey)
+
+	// this is /protected/containers, will first call checkAPIKey because it's part of group "protected"
+	protected.GET("/containers", getContainers)
+
+	// SINGLE ROUTE middleware
+	e.GET("/testing", testing, testingMiddleware)
 
 	e.Logger.Fatal(e.Start(":8000"))
 }
